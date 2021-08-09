@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>canvas 图形验证码</title>
+  </head>
+  <body>
+    <canvas id="canvas" width="10"></canvas>
+    <script>
+      class Captchas {
+        static themes = [
+          "rgb(59 162 114)",
+          "rgb(84 112 198)",
+          "rgb(234 124 204)",
+          "#62acfd",
+          "#8659e7",
+          "#93fcba",
+        ];
+        constructor(options) {
+          const { length, background, remove, width, height, element } =
+            options;
+          this.options = options;
+
+          element.width = width;
+          element.height = height;
+
+          this.element = element;
+          this.ctx = this.element.getContext("2d");
+          this.generateIndex();
+          this.drawBoard();
+          this.drawAll();
+        }
+
+        drawAll() {
+          const { length = 4 } = this.options;
+          const letterList = Captchas.letterList;
+          const list = [];
+          for (let i = 0; i < length; i++) {
+            const ran = Math.floor(this.random(0, letterList.length));
+
+            const [innerX, innerY, step] = this.coords;
+            const letter = letterList[ran];
+            list.push(letter);
+            this.drawLetter(letter, innerX + step * i, innerY);
+          }
+          this.drawCrossLine();
+          this.drawCrossLine();
+          this.options.callback(list)
+        }
+
+        drawBoard() {
+          const { width, height, background } = this.options;
+          this.ctx.fillStyle = background;
+          this.ctx.fillRect(0, 0, width, height);
+        }
+
+        drawLetter(letter, x, y) {
+            console.log(letter, x, y)
+          const size = this.coords[3];
+          this.ctx.save();
+          this.ctx.fillStyle = this.randomColor();
+          // 旋转
+          this.ctx.translate(x, y)
+          this.ctx.rotate(this.randomRadian());
+          this.ctx.fillText(letter, 0, 0);
+          this.ctx.stroke();
+          this.ctx.restore();
+        }
+
+        drawCrossLine() {
+            // 横穿线
+          const { height, width } = this.options;
+          let startY = this.random(0, height);
+          let endY = this.random(0, height);
+          this.ctx.strokeStyle = this.randomColor();
+          this.ctx.quadraticCurveTo(0, height/2, width/2, endY);
+        //   this.ctx.moveTo(width/4, endY);
+        //   this.ctx.quadraticCurveTo(width/4, endY, width, endY)
+          this.ctx.moveTo(width/4 * 2, endY);
+          this.ctx.quadraticCurveTo(width/4 * 2, endY, width, endY)
+          this.ctx.stroke();
+        }
+
+        // 旋转弧度  上下不超过+- PI/4
+        randomRadian() {
+          return this.random(-0.25, 0.25) * Math.PI;
+        }
+
+        randomColor() {
+          const index = Math.floor(this.random(0, Captchas.themes.length));
+          return Captchas.themes[index];
+        }
+        random(min, max) {
+          return Math.random() * (max - min) + min;
+        }
+
+        // 字母随机，大小写英文字母 数字
+        static get letterList() {
+          if (Captchas.LETTERS) {
+            return Captchas.LETTERS;
+          }
+          // i l I不要
+          const exclude = [105, 108, 73, 111, 79];
+
+          const ranges = (start, end) => {
+            const letters = [];
+            for (let item = start; item <= end; item++) {
+              if (exclude.includes(item)) {
+                continue;
+              }
+              letters.push(String.fromCharCode(item));
+            }
+            return letters;
+          };
+
+          // 数字
+          const numList = ranges(49, 57);
+          // 大写字母
+          const upperLetter = ranges(65, 90);
+          // 小写字母
+          const lowerLetter = ranges(97, 122);
+          return (Captchas.LETTERS = numList.concat(
+            upperLetter.concat(lowerLetter)
+          ));
+        }
+
+        // 坐标及字体大小生成
+        generateIndex() {
+          const { length, width, height } = this.options;
+          const fontSize = height * (4 / 5);
+          this.ctx.font = `${fontSize}px serif`;
+
+          // 左右把两边留10px空白
+          const boradWidth = (width - 20) / length;
+          // 字体两边空白宽度
+          const blankWidth = (boradWidth - fontSize) / 2
+
+          // Y 坐标
+          const innerY = height / 1.5;
+
+          // 第一个字符的坐标x轴
+          const startInnerX = blankWidth + 10;
+
+          // 后续坐标的增量就是一个字体空间宽度
+          this.coords = [startInnerX, innerY, boradWidth, fontSize]
+        }
+      }
+
+      new Captchas({
+        length: 4,
+        width: 200,
+        height: 50,
+        element: document.getElementById("canvas"),
+        background: '#f0f0f0',
+        callback: (data) => {
+          console.log(data);
+        }
+      });
+    </script>
+  </body>
+</html>
